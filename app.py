@@ -1,0 +1,321 @@
+from pathlib import Path
+from datetime import date, datetime
+import shutil
+import pandas as pd
+import streamlit as st
+from openpyxl import load_workbook
+
+BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR = BASE_DIR / "data"
+SOURCE_XLSX = DATA_DIR / "sistema_fundatul.xlsx"
+WORK_XLSX = DATA_DIR / "sistema_fundatul_trabajo.xlsx"
+
+st.set_page_config(page_title="FUNDATUL · Vida Independiente", page_icon="🏠", layout="wide")
+
+st.markdown("""
+<style>
+.block-container {padding-top: 1.5rem; padding-bottom: 2rem;}
+[data-testid="stMetric"] {background: #f7f7f8; border: 1px solid #e6e6e8; padding: 14px; border-radius: 12px;}
+.small-note {font-size: .88rem; opacity: .78;}
+</style>
+""", unsafe_allow_html=True)
+
+if not WORK_XLSX.exists():
+    shutil.copy2(SOURCE_XLSX, WORK_XLSX)
+
+TABLES = {
+    "Personas": ("Configuracion", 4),
+    "Intervenciones": ("Intervenciones", 4),
+    "Incidencias": ("Incidencias", 4),
+    "Objetivos PIA": ("Objetivos PIA", 4),
+    "Coordinaciones": ("Coordinaciones", 4),
+    "Seguimiento semanal": ("Seguimiento semanal", 4),
+    "Seguimiento mensual": ("Seguimiento mensual", 4),
+    "Indicadores": ("Indicadores", 4),
+}
+
+@st.cache_data(show_spinner=False)
+def read_table(path_str, sheet, header_row, stamp):
+    df = pd.read_excel(path_str, sheet_name=sheet, header=header_row-1, engine="openpyxl")
+    df = df.dropna(how="all")
+    # Remove template rows that only contain sequential IDs / formulas and no user data.
+    non_id_cols = [c for c in df.columns if str(c).strip().lower() not in {"id", "mes"}]
+    if non_id_cols:
+        meaningful = df[non_id_cols].notna().any(axis=1)
+        df = df[meaningful].copy()
+    return df
+
+def stamp(path):
+    p = Path(path)
+    return p.stat().st_mtime_ns if p.exists() else 0
+
+def load_table(name):
+    sheet, header = TABLES[name]
+    return read_table(str(WORK_XLSX), sheet, header, stamp(WORK_XLSX))
+
+def clear_cache():
+    read_table.clear()
+
+def excel_safe(v):
+    if isinstance(v, pd.Timestamp):
+        return v.to_pydatetime()
+    if pd.isna(v):
+        return None
+    return v
+
+def append_record(table_name, record):
+    sheet, header_row = TABLES[table_name]
+    wb = load_workbook(WORK_XLSX)
+    ws = wb[sheet]
+    headers = [ws.cell(header_row, c).value for c in range(1, ws.max_column + 1)]
+    # Find first truly blank data row. Template IDs do not count as user data.
+    row = header_row + 1
+    while row <= ws.max_row:
+        vals = [ws.cell(row, c).value for c in range(1, ws.max_column + 1)]
+        # user-filled if any field other than ID/Mes has a value
+        user_vals = []
+        for h, v in zip(headers, vals):
+            if str(h).strip().lower() not in {"id", "mes"}:
+                user_vals.append(v)
+        if not any(v not in (None, "") for v in user_vals):
+            break
+        row += 1
+    if row > ws.max_row:
+        ws.insert_rows(row)
+    # Preserve/create sequential ID when available.
+    if "ID" in headers and not record.get("ID"):
+        ids = []
+        id_col = headers.index("ID") + 1
+        for r in range(header_row + 1, ws.max_row + 1):
+            v = ws.cell(r, id_col).value
+            if isinstance(v, (int, float)):
+                ids.append(int(v))
+        record["ID"] = max(ids, default=0) + 1
+    for c, h in enumerate(headers, start=1):
+        if h in record:
+            ws.cell(row, c).value = excel_safe(record[h])
+        elif h == "Mes" and record.get("Fecha"):
+            f = record["Fecha"]
+            if isinstance(f, (date, datetime)):
+                ws.cell(row, c).value = f.strftime("%Y-%m")
+    wb.save(WORK_XLSX)
+    clear_cache()
+
+def active_people():
+    df = load_table("Personas")
+    if df.empty:
+        return []
+    name_col = "Nombre / código" if "Nombre / código" in df.columns else df.columns[1]
+    if "Estado" in df.columns:
+        df = df[df["Estado"].fillna("").astype(str).str.lower().eq("activa")]
+    return [str(x) for x in df[name_col].dropna().tolist()]
+
+def person_id_for_name(name):
+    df = load_table("Personas")
+    if df.empty: return name
+    m = df[df["Nombre / código"].astype(str).eq(str(name))]
+    return str(m.iloc[0]["ID persona"]) if not m.empty else name
+
+def person_filter(df, person):
+    if df.empty: return df
+    candidates = [c for c in ["Persona", "Persona / ámbito", "Nombre / código"] if c in df.columns]
+    if not candidates: return df
+    pid = person_id_for_name(person)
+    c = candidates[0]
+    return df[df[c].astype(str).isin([str(person), str(pid)])]
+
+def show_table(df, key):
+    if df.empty:
+        st.info("Todavía no hay registros.")
+        return
+    st.dataframe(df, use_container_width=True, hide_index=True, key=key)
+
+with st.sidebar:
+    st.title("FUNDATUL")
+    st.caption("Servicio de Apoyo a la Vida Independiente")
+    section = st.radio("Ir a", ["Dashboard", "Personas", "Intervenciones", "Incidencias", "Objetivos PIA", "Coordinaciones", "Datos / copia"])
+    st.divider()
+    st.caption("Prototipo basado en el Excel original. Los cambios se guardan en una copia de trabajo del archivo.")
+
+st.title("Sistema de Gestión y Seguimiento")
+st.caption("Prototipo web · Vida Independiente")
+
+if section == "Dashboard":
+    personas = load_table("Personas")
+    interv = load_table("Intervenciones")
+    incid = load_table("Incidencias")
+    obj = load_table("Objetivos PIA")
+    coord = load_table("Coordinaciones")
+
+    active = 0
+    if not personas.empty and "Estado" in personas:
+        active = int(personas["Estado"].fillna("").astype(str).str.lower().eq("activa").sum())
+    hours = float(pd.to_numeric(interv.get("Duración (h)", pd.Series(dtype=float)), errors="coerce").fillna(0).sum())
+    n_interv = len(interv)
+    n_incid = len(incid)
+    n_obj_active = int(obj.get("Estado", pd.Series(dtype=str)).fillna("").astype(str).str.lower().eq("activo").sum())
+    n_obj_done = int(obj.get("Estado", pd.Series(dtype=str)).fillna("").astype(str).str.lower().eq("alcanzado").sum())
+    grav = incid.get("Gravedad", pd.Series(dtype=str)).fillna("").astype(str).str.lower()
+    n_graves = int(grav.isin(["grave", "muy grave"]).sum())
+
+    c1,c2,c3,c4 = st.columns(4)
+    c1.metric("Personas activas", active)
+    c2.metric("Horas de apoyo", f"{hours:.1f}")
+    c3.metric("Intervenciones", n_interv)
+    c4.metric("Incidencias", n_incid)
+    c1,c2,c3,c4 = st.columns(4)
+    c1.metric("Objetivos activos", n_obj_active)
+    c2.metric("Objetivos alcanzados", n_obj_done)
+    c3.metric("Incidencias graves", n_graves)
+    c4.metric("Coordinaciones", len(coord))
+
+    st.subheader("Actividad reciente")
+    if not interv.empty:
+        recent = interv.copy()
+        if "Fecha" in recent.columns:
+            recent["Fecha"] = pd.to_datetime(recent["Fecha"], errors="coerce")
+            recent = recent.sort_values("Fecha", ascending=False)
+        show_table(recent.head(10), "dash_recent")
+    else:
+        st.info("Registra una intervención para empezar a alimentar el cuadro de mando.")
+
+elif section == "Personas":
+    personas = load_table("Personas")
+    st.subheader("Personas")
+    show_table(personas, "people")
+    people = active_people()
+    if people:
+        st.subheader("Ficha individual")
+        p = st.selectbox("Seleccionar persona", people)
+        interv = person_filter(load_table("Intervenciones"), p)
+        incid = person_filter(load_table("Incidencias"), p)
+        obj = person_filter(load_table("Objetivos PIA"), p)
+        coord = person_filter(load_table("Coordinaciones"), p)
+        hrs = pd.to_numeric(interv.get("Duración (h)", pd.Series(dtype=float)), errors="coerce").fillna(0).sum()
+        avance = pd.to_numeric(obj.get("Grado consecución %", pd.Series(dtype=float)), errors="coerce").dropna()
+        c1,c2,c3,c4 = st.columns(4)
+        c1.metric("Horas de apoyo", f"{hrs:.1f}")
+        c2.metric("Intervenciones", len(interv))
+        c3.metric("Incidencias", len(incid))
+        c4.metric("Avance medio", f"{avance.mean():.0f}%" if len(avance) else "—")
+        tabs = st.tabs(["Objetivos PIA", "Intervenciones", "Incidencias", "Coordinaciones"])
+        with tabs[0]: show_table(obj, "p_obj")
+        with tabs[1]: show_table(interv, "p_int")
+        with tabs[2]: show_table(incid, "p_inc")
+        with tabs[3]: show_table(coord, "p_coord")
+
+elif section == "Intervenciones":
+    st.subheader("Registrar intervención")
+    people = active_people()
+    with st.form("new_intervention", clear_on_submit=True):
+        c1,c2,c3 = st.columns(3)
+        fecha = c1.date_input("Fecha", value=date.today())
+        persona = c2.selectbox("Persona", people or ["Persona 1"])
+        profesional = c3.text_input("Profesional")
+        area = st.text_input("Área")
+        objetivo = st.text_input("Objetivo PIA")
+        actuacion = st.text_area("Intervención realizada")
+        c1,c2,c3 = st.columns(3)
+        tipo = c1.selectbox("Tipo apoyo", ["", "Información/orientación", "Supervisión", "Entrenamiento", "Acompañamiento", "Apoyo directo", "Coordinación"])
+        intensidad = c2.selectbox("Intensidad", ["", "Sin apoyo", "Baja", "Media", "Alta", "Muy alta"])
+        duracion = c3.number_input("Duración (h)", min_value=0.0, step=0.25)
+        resultado = st.text_area("Resultado")
+        proxima = st.text_input("Próxima actuación")
+        revision = st.selectbox("¿Revisión PIA?", ["No", "Sí"])
+        observ = st.text_area("Observaciones")
+        submitted = st.form_submit_button("Guardar intervención", type="primary")
+        if submitted:
+            append_record("Intervenciones", {"Fecha": fecha, "Persona": person_id_for_name(persona), "Profesional": profesional, "Área": area, "Objetivo PIA": objetivo, "Intervención realizada": actuacion, "Tipo apoyo": tipo, "Intensidad": intensidad, "Duración (h)": duracion, "Resultado": resultado, "Próxima actuación": proxima, "Revisión PIA": revision, "Observaciones": observ})
+            st.success("Intervención guardada.")
+    st.subheader("Histórico")
+    show_table(load_table("Intervenciones"), "ints")
+
+elif section == "Incidencias":
+    st.subheader("Registrar incidencia")
+    people = active_people()
+    with st.form("new_incident", clear_on_submit=True):
+        c1,c2,c3 = st.columns(3)
+        fecha = c1.date_input("Fecha", value=date.today())
+        persona = c2.selectbox("Persona / ámbito", people or ["Persona 1"])
+        gravedad = c3.selectbox("Gravedad", ["Leve", "Moderada", "Grave", "Muy grave"])
+        tipo = st.text_input("Tipo")
+        indicador = st.text_input("Indicador afectado")
+        descripcion = st.text_area("Descripción objetiva")
+        impacto = st.text_area("Impacto")
+        medida = st.text_area("Medida inmediata")
+        c1,c2,c3 = st.columns(3)
+        responsable = c1.text_input("Responsable")
+        seguimiento = c2.date_input("Fecha seguimiento", value=date.today())
+        estado = c3.selectbox("Estado", ["Abierta", "En seguimiento", "Cerrada"])
+        correctora = st.text_area("Medida correctora / preventiva")
+        submitted = st.form_submit_button("Guardar incidencia", type="primary")
+        if submitted:
+            append_record("Incidencias", {"Fecha": fecha, "Persona / ámbito": person_id_for_name(persona), "Tipo": tipo, "Gravedad": gravedad, "Indicador afectado": indicador, "Descripción objetiva": descripcion, "Impacto": impacto, "Medida inmediata": medida, "Responsable": responsable, "Fecha seguimiento": seguimiento, "Medida correctora/preventiva": correctora, "Estado": estado})
+            st.success("Incidencia guardada.")
+    st.subheader("Histórico")
+    show_table(load_table("Incidencias"), "incs")
+
+elif section == "Objetivos PIA":
+    st.subheader("Añadir / seguir objetivo PIA")
+    people = active_people()
+    with st.form("new_goal", clear_on_submit=True):
+        c1,c2 = st.columns(2)
+        persona = c1.selectbox("Persona", people or ["Persona 1"])
+        area = c2.text_input("Área")
+        objetivo = st.text_area("Objetivo PIA")
+        indicador = st.text_input("Indicador / criterio")
+        inicial = st.text_area("Situación inicial")
+        apoyos = st.text_area("Apoyos previstos")
+        c1,c2,c3 = st.columns(3)
+        intensidad = c1.selectbox("Intensidad", ["", "Sin apoyo", "Baja", "Media", "Alta", "Muy alta"])
+        frecuencia = c2.text_input("Frecuencia")
+        grado = c3.number_input("Grado consecución %", min_value=0, max_value=100, step=5)
+        evolucion = st.text_area("Evolución")
+        dificultades = st.text_area("Dificultades")
+        ajustes = st.text_area("Ajustes / nuevas actuaciones")
+        c1,c2 = st.columns(2)
+        prox = c1.date_input("Próxima revisión", value=date.today())
+        estado = c2.selectbox("Estado", ["Activo", "Alcanzado", "Suspendido", "Reformular"])
+        submitted = st.form_submit_button("Guardar objetivo", type="primary")
+        if submitted:
+            append_record("Objetivos PIA", {"Persona": person_id_for_name(persona), "Área": area, "Objetivo PIA": objetivo, "Indicador / criterio": indicador, "Situación inicial": inicial, "Apoyos previstos": apoyos, "Intensidad": intensidad, "Frecuencia": frecuencia, "Fecha inicio": date.today(), "Fecha seguimiento": date.today(), "Evolución": evolucion, "Grado consecución %": grado, "Dificultades": dificultades, "Ajustes / nuevas actuaciones": ajustes, "Próxima revisión": prox, "Estado": estado})
+            st.success("Objetivo PIA guardado.")
+    st.subheader("Objetivos registrados")
+    show_table(load_table("Objetivos PIA"), "goals")
+
+elif section == "Coordinaciones":
+    st.subheader("Registrar coordinación")
+    people = active_people()
+    with st.form("new_coord", clear_on_submit=True):
+        c1,c2,c3 = st.columns(3)
+        fecha = c1.date_input("Fecha", value=date.today())
+        persona = c2.selectbox("Persona", people or ["Persona 1"])
+        tipo = c3.text_input("Tipo coordinación")
+        entidad = st.text_input("Entidad / recurso")
+        contacto = st.text_input("Profesional / contacto")
+        modalidad = st.selectbox("Modalidad", ["", "Presencial", "Telefónica", "Videollamada", "Correo", "Otra"])
+        motivo = st.text_area("Motivo / objetivo")
+        info = st.text_area("Información relevante")
+        acuerdos = st.text_area("Acuerdos")
+        c1,c2,c3 = st.columns(3)
+        responsable = c1.text_input("Responsable")
+        plazo = c2.text_input("Plazo / próxima actuación")
+        estado = c3.selectbox("Estado", ["Pendiente", "En curso", "Realizada", "Cerrada"])
+        observ = st.text_area("Observaciones")
+        submitted = st.form_submit_button("Guardar coordinación", type="primary")
+        if submitted:
+            append_record("Coordinaciones", {"Fecha": fecha, "Persona": person_id_for_name(persona), "Tipo coordinación": tipo, "Entidad / recurso": entidad, "Profesional / contacto": contacto, "Modalidad": modalidad, "Motivo / objetivo": motivo, "Información relevante": info, "Acuerdos": acuerdos, "Responsable": responsable, "Plazo / próxima actuación": plazo, "Estado": estado, "Observaciones": observ})
+            st.success("Coordinación guardada.")
+    st.subheader("Histórico")
+    show_table(load_table("Coordinaciones"), "coords")
+
+elif section == "Datos / copia":
+    st.subheader("Archivo de datos")
+    st.write("La app trabaja sobre una copia del Excel original, de modo que el archivo subido permanece intacto.")
+    with open(WORK_XLSX, "rb") as f:
+        st.download_button("Descargar Excel actualizado", f, file_name="Sistema_FUNDATUL_actualizado.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    if st.button("Restablecer desde el Excel original"):
+        shutil.copy2(SOURCE_XLSX, WORK_XLSX)
+        clear_cache()
+        st.success("Copia de trabajo restablecida.")
+    st.info("En Streamlit Community Cloud el almacenamiento local puede reiniciarse al redeplegar o reiniciar la app. Para uso real multiusuario conviene conectar una base de datos persistente gratuita, por ejemplo Supabase.")
