@@ -6,7 +6,7 @@ import streamlit as st
 from openpyxl import load_workbook
 
 BASE_DIR = Path(__file__).resolve().parent
-DATA_DIR = BASE_DIR / "data"
+DATA_DIR = BASE_DIR 
 SOURCE_XLSX = DATA_DIR / "sistema_fundatul.xlsx"
 WORK_XLSX = DATA_DIR / "sistema_fundatul_trabajo.xlsx"
 
