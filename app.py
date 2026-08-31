@@ -133,7 +133,7 @@ def show_table(df, key):
 with st.sidebar:
     st.title("FUNDATUL")
     st.caption("Servicio de Apoyo a la Vida Independiente")
-    section = st.radio("Ir a", ["Dashboard", "Personas", "Intervenciones", "Incidencias", "Objetivos PIA", "Coordinaciones", "Datos / copia"])
+    section = st.radio("Ir a", ["Dashboard", "Personas", "PIA inicial", "Intervenciones", "Incidencias", "Objetivos PIA", "Coordinaciones", "Datos / copia"])
     st.divider()
     st.caption("Prototipo basado en el Excel original. Los cambios se guardan en una copia de trabajo del archivo.")
 
@@ -203,6 +203,179 @@ elif section == "Personas":
         with tabs[1]: show_table(interv, "p_int")
         with tabs[2]: show_table(incid, "p_inc")
         with tabs[3]: show_table(coord, "p_coord")
+elif section == "PIA inicial":
+    st.subheader("PIA inicial")
+    st.caption("Plan Individual de Apoyos · FUNDATUL · DEJAR SER")
+
+    personas = load_table("Personas")
+    nombres_personas = active_people()
+
+    if not nombres_personas:
+        st.warning("No hay personas registradas.")
+    else:
+        persona_sel = st.selectbox(
+            "Selecciona una persona",
+            nombres_personas,
+            key="pia_persona"
+        )
+
+        st.markdown("### 0. Control documental e identificación")
+        codigo = st.text_input("Código de participante")
+        fecha_nacimiento = st.date_input("Fecha de nacimiento", value=None)
+        municipio = st.text_input("Municipio / entorno habitual")
+        profesional = st.text_input("Profesional referente")
+
+        col1, col2 = st.columns(2)
+        with col1:
+            periodo_desde = st.date_input("Periodo del PIA · Desde", value=None)
+        with col2:
+            periodo_hasta = st.date_input("Periodo del PIA · Hasta", value=None)
+
+        version = st.selectbox(
+            "Versión",
+            ["Inicial", "Revisión intermedia", "Final", "Extraordinaria"]
+        )
+
+        st.markdown("### 2. Perfil personal, preferencias y voz de la persona")
+        situacion_actual = st.text_area("2.1. Situación actual y contexto de vida")
+        importante_para = st.text_area("2.2. Lo que es importante PARA la persona")
+        bienestar_seguridad = st.text_area("2.3. Lo que es importante POR su bienestar y seguridad")
+        fortalezas = st.text_area("2.4. Capacidades, fortalezas, intereses y recursos personales")
+        comunicacion = st.text_area("2.5. Comunicación y apoyo a la toma de decisiones")
+        red_apoyo = st.text_area("2.6. Red de apoyo y personas significativas")
+        cambios_deseados = st.text_area("2.7. Cambios que la persona quiere conseguir")
+
+        st.markdown("### 3. Valoración funcional inicial por áreas de vida")
+        st.caption(
+            "Escala 0–4: 0 = autónomo/a · 1 = supervisión puntual · "
+            "2 = apoyo intermitente · 3 = apoyo frecuente · 4 = apoyo intenso/estable."
+        )
+
+        areas_vida = [
+            "Autocuidado e higiene",
+            "Organización doméstica y rutinas",
+            "Alimentación y vida diaria",
+            "Manejo funcional del dinero y compras",
+            "Movilidad, transporte y orientación",
+            "Gestiones y acceso a recursos/servicios",
+            "Competencia digital y uso funcional de TIC",
+            "Bienestar y regulación emocional",
+            "Comunicación, relaciones y límites",
+            "Participación comunitaria y ocio",
+            "Empleo / formación / actividad ocupacional",
+            "Toma de decisiones y autodeterminación",
+        ]
+
+        valoracion_funcional = []
+
+        for i, area in enumerate(areas_vida):
+            st.markdown(f"**{area}**")
+            evidencia = st.text_area(
+                "Situación inicial / evidencia",
+                key=f"pia_evidencia_{i}"
+            )
+
+            c1, c2, c3 = st.columns(3)
+
+            with c1:
+                nivel = st.selectbox(
+                    "Nivel de apoyo",
+                    [0, 1, 2, 3, 4],
+                    key=f"pia_nivel_{i}"
+                )
+
+            with c2:
+                prioridad = st.selectbox(
+                    "Prioridad",
+                    ["Alta", "Media", "Baja"],
+                    key=f"pia_prioridad_{i}"
+                )
+
+            with c3:
+                contexto = st.multiselect(
+                    "Contexto principal",
+                    ["Hogar", "Comunidad", "Sede", "Online"],
+                    key=f"pia_contexto_{i}"
+                )
+
+            valoracion_funcional.append({
+                "Área": area,
+                "Situación inicial / evidencia": evidencia,
+                "Nivel apoyo": nivel,
+                "Prioridad": prioridad,
+                "Contexto": ", ".join(contexto),
+            })
+
+            st.divider()
+
+        sintesis_prioridades = st.text_area(
+            "Síntesis de prioridades acordadas"
+        )
+        st.markdown("### 4. Resultados personales y objetivos priorizados")
+        st.caption(
+            "Cada objetivo debe indicar qué cambio se espera, "
+            "cómo se observará y con qué evidencia se considerará avanzado o alcanzado."
+        )
+
+        objetivos_pia_inicial = []
+
+        for i in range(1, 7):
+            st.markdown(f"**Objetivo {i}**")
+
+            resultado = st.text_area(
+                "Resultado personal esperado",
+                key=f"pia_obj_resultado_{i}"
+            )
+
+            punto_partida = st.text_area(
+                "Punto de partida",
+                key=f"pia_obj_partida_{i}"
+            )
+
+            indicador = st.text_area(
+                "Indicador / evidencia",
+                key=f"pia_obj_indicador_{i}"
+            )
+
+            c1, c2, c3 = st.columns(3)
+
+            with c1:
+                meta = st.text_input(
+                    "Meta / criterio",
+                    key=f"pia_obj_meta_{i}"
+                )
+
+            with c2:
+                fecha_revision = st.date_input(
+                    "Fecha de revisión",
+                    value=None,
+                    key=f"pia_obj_fecha_{i}"
+                )
+
+            with c3:
+                prioridad_obj = st.selectbox(
+                    "Prioridad",
+                    ["Alta", "Media", "Baja"],
+                    key=f"pia_obj_prioridad_{i}"
+                )
+
+            objetivos_pia_inicial.append({
+                "Objetivo": i,
+                "Resultado personal esperado": resultado,
+                "Punto de partida": punto_partida,
+                "Indicador / evidencia": indicador,
+                "Meta / criterio": meta,
+                "Fecha revisión": fecha_revision,
+                "Prioridad": prioridad_obj,
+            })
+
+            st.divider()
+
+        objetivo_general = st.text_area(
+            "Objetivo general del periodo"
+        )
+
+
 
 elif section == "Intervenciones":
     st.subheader("Registrar intervención")
