@@ -195,7 +195,7 @@ if section == "Dashboard":
 
 elif section == "Personas":
     respuesta_personas = supabase.table("personas").select("*").execute()
-personas = pd.DataFrame(respuesta_personas.data)
+    personas = pd.DataFrame(respuesta_personas.data)
     st.subheader("Personas")
     show_table(personas, "people")
     people = active_people()
