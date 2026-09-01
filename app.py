@@ -13,7 +13,10 @@ try:
     conexion_supabase_ok = True
 except Exception:
     conexion_supabase_ok = False
-st.success("Supabase conectado correctamente") if conexion_supabase_ok else st.error("No se pudo conectar con Supabase")
+if conexion_supabase_ok:
+    st.success("Supabase conectado correctamente")
+else:
+    st.error("No se pudo conectar con Supabase")
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR 
 SOURCE_XLSX = DATA_DIR / "sistema_fundatul.xlsx"
