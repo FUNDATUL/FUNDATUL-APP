@@ -23,9 +23,9 @@ WORK_XLSX = DATA_DIR / "sistema_fundatul_trabajo.xlsx"
 st.set_page_config(page_title="FUNDATUL · Vida Independiente", page_icon="🏠", layout="wide")
 if conexion_supabase_ok:
     st.success("Supabase conectado correctamente")
-   else:
+else:
     st.error("No se pudo conectar con Supabase")
-    st.code(error_supabase)            
+    st.code(error_supabase)           
 st.markdown("""
 <style>
 .block-container {padding-top: 1.5rem; padding-bottom: 2rem;}
