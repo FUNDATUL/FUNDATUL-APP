@@ -11,8 +11,9 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 try:
     prueba_supabase = supabase.table("personas").select("id").limit(1).execute()
     conexion_supabase_ok = True
-except Exception:
+except Exception as e:
     conexion_supabase_ok = False
+    error_supabase = str(e)
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR 
@@ -22,8 +23,9 @@ WORK_XLSX = DATA_DIR / "sistema_fundatul_trabajo.xlsx"
 st.set_page_config(page_title="FUNDATUL · Vida Independiente", page_icon="🏠", layout="wide")
 if conexion_supabase_ok:
     st.success("Supabase conectado correctamente")
-else:
+   else:
     st.error("No se pudo conectar con Supabase")
+    st.code(error_supabase)            
 st.markdown("""
 <style>
 .block-container {padding-top: 1.5rem; padding-bottom: 2rem;}
