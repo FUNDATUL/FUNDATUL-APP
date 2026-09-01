@@ -194,7 +194,8 @@ if section == "Dashboard":
         st.info("Registra una intervención para empezar a alimentar el cuadro de mando.")
 
 elif section == "Personas":
-    personas = load_table("Personas")
+    respuesta_personas = supabase.table("personas").select("*").execute()
+personas = pd.DataFrame(respuesta_personas.data)
     st.subheader("Personas")
     show_table(personas, "people")
     people = active_people()
