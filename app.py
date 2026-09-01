@@ -4,6 +4,10 @@ import shutil
 import pandas as pd
 import streamlit as st
 from openpyxl import load_workbook
+from supabase import create_client
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR 
