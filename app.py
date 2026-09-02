@@ -391,7 +391,79 @@ elif section == "PIA inicial":
             "Objetivo general del periodo"
         )
 
+        if st.button("Guardar PIA inicial", type="primary"):
+            try:
+                persona_data = (
+                    supabase.table("personas")
+                    .select("id")
+                    .eq("nombre", persona_sel)
+                    .limit(1)
+                    .execute()
+                )
 
+                if not persona_data.data:
+                    st.error("No se ha encontrado la persona seleccionada en Supabase.")
+                else:
+                    persona_id = persona_data.data[0]["id"]
+
+                                        pia_data = {
+                        "persona_id": persona_id,
+                        "fecha_nacimiento": fecha_nacimiento.isoformat() if fecha_nacimiento else None,
+                        "municipio": municipio,
+                        "profesional_referente": profesional,
+                        "periodo_desde": periodo_desde.isoformat() if periodo_desde else None,
+                        "periodo_hasta": periodo_hasta.isoformat() if periodo_hasta else None,
+                        "version": version,
+                        "situacion_actual": situacion_actual,
+                        "importante_para": importante_para,
+                        "importante_por": bienestar_seguridad,
+                        "capacidades_fortalezas": fortalezas,
+                        "comunicacion_toma_decisiones": comunicacion,
+                        "red_apoyo": red_apoyo,
+                        "cambios_deseados": cambios_deseados,
+                        "sintesis_prioridades": sintesis_prioridades,
+                        "objetivo_general": objetivo_general,
+                        "estado": "Activo"
+                    }
+                        
+
+                    pia_respuesta = (
+                        supabase.table("pia_inicial")
+                        .insert(pia_data)
+                        .execute()
+                    )
+
+                    pia_id = pia_respuesta.data[0]["id"]
+
+                    for valoracion in valoracion_funcional:
+                        supabase.table("valoracion_funcional").insert({
+                            "pia_id": pia_id,
+                            "persona_id": persona_id,
+                            "area": valoracion["Área"],
+                            "situacion_inicial_evidencia": valoracion["Situación inicial / evidencia"],
+                            "nivel_apoyo": valoracion["Nivel apoyo"],
+                            "prioridad": valoracion["Prioridad"],
+                            "contexto_principal": valoracion["Contexto"]
+                        }).execute()
+
+                    for objetivo in objetivos_pia_inicial:
+                        supabase.table("objetivos_pia").insert({
+                            "pia_id": pia_id,
+                            "persona_id": persona_id,
+                            "numero_objetivo": objetivo["Objetivo"],
+                            "resultado_esperado": objetivo["Resultado personal esperado"],
+                            "punto_partida": objetivo["Punto de partida"],
+                            "indicador_evidencia": objetivo["Indicador / evidencia"],
+                            "meta_criterio": objetivo["Meta / criterio"],
+                            "fecha_revision": objetivo["Fecha revisión"].isoformat() if objetivo["Fecha revisión"] else None,
+                            "prioridad": objetivo["Prioridad"],
+                            "estado": "Activo"
+                        }).execute()
+
+                    st.success("PIA inicial guardado correctamente en Supabase.")
+
+            except Exception as e:
+                st.error(f"No se pudo guardar el PIA: {e}")
 
 elif section == "Intervenciones":
     st.subheader("Registrar intervención")
