@@ -406,7 +406,7 @@ elif section == "PIA inicial":
                 else:
                     persona_id = persona_data.data[0]["id"]
 
-                                        pia_data = {
+                    pia_data = {
                         "persona_id": persona_id,
                         "fecha_nacimiento": fecha_nacimiento.isoformat() if fecha_nacimiento else None,
                         "municipio": municipio,
