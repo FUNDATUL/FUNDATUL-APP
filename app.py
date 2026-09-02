@@ -224,7 +224,7 @@ elif section == "PIA inicial":
 
     respuesta_personas = supabase.table("personas").select("*").execute()
     personas = pd.DataFrame(respuesta_personas.data)
-    nombres_personas = active_people()
+    nombres_personas = personas["nombre"].dropna().astype(str).tolist()
 
     if not nombres_personas:
         st.warning("No hay personas registradas.")
