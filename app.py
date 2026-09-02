@@ -198,7 +198,7 @@ elif section == "Personas":
     personas = pd.DataFrame(respuesta_personas.data)
     st.subheader("Personas")
     show_table(personas, "people")
-    people = active_people()
+    people = personas["nombre"].dropna().astype(str).tolist()
     if people:
         st.subheader("Ficha individual")
         p = st.selectbox("Seleccionar persona", people)
