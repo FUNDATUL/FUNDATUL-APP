@@ -222,7 +222,8 @@ elif section == "PIA inicial":
     st.subheader("PIA inicial")
     st.caption("Plan Individual de Apoyos · FUNDATUL · DEJAR SER")
 
-    personas = load_table("Personas")
+    respuesta_personas = supabase.table("personas").select("*").execute()
+    personas = pd.DataFrame(respuesta_personas.data)
     nombres_personas = active_people()
 
     if not nombres_personas:
