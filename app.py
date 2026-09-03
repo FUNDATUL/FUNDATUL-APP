@@ -298,8 +298,8 @@ profesional = st.text_input(
     value=(pia_existente.get("profesional_referente", "") if pia_existente else "")
 )
 
-        col1, col2 = st.columns(2)
-        with col1:
+col1, col2 = st.columns(2)
+    with col1:
             periodo_desde = st.date_input(
     "Periodo del PIA · Desde",
     value=(
@@ -308,7 +308,7 @@ profesional = st.text_input(
         else None
     )
 )
-        with col2:
+    with col2:
             periodo_hasta = st.date_input(
     "Periodo del PIA · Hasta",
     value=(
@@ -318,7 +318,7 @@ profesional = st.text_input(
     )
 )
 
-        opciones_version = ["Inicial", "Revisión intermedia", "Final", "Extraordinaria"]
+opciones_version = ["Inicial", "Revisión intermedia", "Final", "Extraordinaria"]
 version_guardada = pia_existente.get("version", "Inicial") if pia_existente else "Inicial"
 
 version = st.selectbox(
@@ -327,37 +327,37 @@ version = st.selectbox(
     index=opciones_version.index(version_guardada) if version_guardada in opciones_version else 0
 )
 
-        st.markdown("### 2. Perfil personal, preferencias y voz de la persona")
-        situacion_actual = st.text_area(
+ st.markdown("### 2. Perfil personal, preferencias y voz de la persona")
+ situacion_actual = st.text_area(
     "2.1. Situación actual y contexto de vida",
     value=pia_existente.get("situacion_actual", "") if pia_existente else ""
 )
-        importante_para = st.text_area(
+ importante_para = st.text_area(
     "2.2. Lo que es importante PARA la persona",
     value=pia_existente.get("importante_para", "") if pia_existente else ""
 )
-        bienestar_seguridad = st.text_area(
+ bienestar_seguridad = st.text_area(
     "2.3. Lo que es importante POR su bienestar y seguridad",
     value=pia_existente.get("importante_por", "") if pia_existente else ""
 )
-        fortalezas = st.text_area(
+ fortalezas = st.text_area(
     "2.4. Capacidades, fortalezas, intereses y recursos personales",
     value=pia_existente.get("capacidades_fortalezas", "") if pia_existente else ""
 )
-        comunicacion = st.text_area(
+ comunicacion = st.text_area(
     "2.5. Comunicación y apoyo a la toma de decisiones",
     value=pia_existente.get("comunicacion_toma_decisiones", "") if pia_existente else ""
 )
-        red_apoyo = st.text_area(
+ red_apoyo = st.text_area(
     "2.6. Red de apoyo y personas significativas",
     value=pia_existente.get("red_apoyo", "") if pia_existente else ""
 )
-        cambios_deseados = st.text_area(
+ cambios_deseados = st.text_area(
     "2.7. Cambios que la persona quiere conseguir",
     value=pia_existente.get("cambios_deseados", "") if pia_existente else ""
 )
 
-        st.markdown("### 3. Valoración funcional inicial por áreas de vida")
+ st.markdown("### 3. Valoración funcional inicial por áreas de vida")
         st.caption(
             "Escala 0–4: 0 = autónomo/a · 1 = supervisión puntual · "
             "2 = apoyo intermitente · 3 = apoyo frecuente · 4 = apoyo intenso/estable."
