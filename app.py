@@ -675,30 +675,203 @@ elif section == "PIA inicial":
 
 elif section == "Intervenciones":
     st.subheader("Registrar intervención")
-    people = active_people()
-    with st.form("new_intervention", clear_on_submit=True):
-        c1,c2,c3 = st.columns(3)
-        fecha = c1.date_input("Fecha", value=date.today())
-        persona = c2.selectbox("Persona", people or ["Persona 1"])
-        profesional = c3.text_input("Profesional")
-        area = st.text_input("Área")
-        objetivo = st.text_input("Objetivo PIA")
-        actuacion = st.text_area("Intervención realizada")
-        c1,c2,c3 = st.columns(3)
-        tipo = c1.selectbox("Tipo apoyo", ["", "Información/orientación", "Supervisión", "Entrenamiento", "Acompañamiento", "Apoyo directo", "Coordinación"])
-        intensidad = c2.selectbox("Intensidad", ["", "Sin apoyo", "Baja", "Media", "Alta", "Muy alta"])
-        duracion = c3.number_input("Duración (h)", min_value=0.0, step=0.25)
-        resultado = st.text_area("Resultado")
-        proxima = st.text_input("Próxima actuación")
-        revision = st.selectbox("¿Revisión PIA?", ["No", "Sí"])
-        observ = st.text_area("Observaciones")
-        submitted = st.form_submit_button("Guardar intervención", type="primary")
-        if submitted:
-            append_record("Intervenciones", {"Fecha": fecha, "Persona": person_id_for_name(persona), "Profesional": profesional, "Área": area, "Objetivo PIA": objetivo, "Intervención realizada": actuacion, "Tipo apoyo": tipo, "Intensidad": intensidad, "Duración (h)": duracion, "Resultado": resultado, "Próxima actuación": proxima, "Revisión PIA": revision, "Observaciones": observ})
-            st.success("Intervención guardada.")
-    st.subheader("Histórico")
-    show_table(load_table("Intervenciones"), "ints")
 
+    respuesta_personas = (
+        supabase.table("personas")
+        .select("*")
+        .order("nombre")
+        .execute()
+    )
+
+    personas_intervencion = respuesta_personas.data or []
+
+    if not personas_intervencion:
+        st.warning("No hay personas registradas.")
+    else:
+        nombres_intervencion = [
+            p["nombre"]
+            for p in personas_intervencion
+            if p.get("nombre")
+        ]
+
+        with st.form("new_intervention", clear_on_submit=True):
+            c1, c2, c3 = st.columns(3)
+
+            fecha = c1.date_input("Fecha", value=date.today())
+
+            persona = c2.selectbox(
+                "Persona",
+                nombres_intervencion
+            )
+
+            profesional = c3.text_input("Profesional")
+
+            persona_registro = next(
+                p for p in personas_intervencion
+                if p.get("nombre") == persona
+            )
+            persona_id_intervencion = persona_registro["id"]
+
+            respuesta_pia_intervencion = (
+                supabase.table("pia_inicial")
+                .select("id")
+                .eq("persona_id", persona_id_intervencion)
+                .order("id", desc=True)
+                .limit(1)
+                .execute()
+            )
+
+            pia_id_intervencion = (
+                respuesta_pia_intervencion.data[0]["id"]
+                if respuesta_pia_intervencion.data
+                else None
+            )
+
+            objetivos_intervencion = []
+
+            if pia_id_intervencion:
+                respuesta_objetivos_intervencion = (
+                    supabase.table("objetivos_pia")
+                    .select("*")
+                    .eq("pia_id", pia_id_intervencion)
+                    .order("numero_objetivo")
+                    .execute()
+                )
+                objetivos_intervencion = (
+                    respuesta_objetivos_intervencion.data or []
+                )
+
+            opciones_objetivo = ["Sin objetivo vinculado"]
+
+            mapa_objetivos = {}
+
+            for obj in objetivos_intervencion:
+                numero = obj.get("numero_objetivo")
+                resultado_obj = obj.get("resultado_esperado") or ""
+                etiqueta = f"Objetivo {numero}"
+
+                if resultado_obj:
+                    etiqueta += f" · {resultado_obj}"
+
+                opciones_objetivo.append(etiqueta)
+                mapa_objetivos[etiqueta] = obj["id"]
+
+            area = st.text_input("Área")
+
+            objetivo_seleccionado = st.selectbox(
+                "Objetivo PIA",
+                opciones_objetivo
+            )
+
+            objetivo_id_intervencion = mapa_objetivos.get(
+                objetivo_seleccionado
+            )
+
+            actuacion = st.text_area("Intervención realizada")
+
+            c1, c2, c3 = st.columns(3)
+
+            tipo = c1.selectbox(
+                "Tipo apoyo",
+                [
+                    "",
+                    "Información/orientación",
+                    "Supervisión",
+                    "Entrenamiento",
+                    "Acompañamiento",
+                    "Apoyo directo",
+                    "Coordinación"
+                ]
+            )
+
+            intensidad = c2.selectbox(
+                "Intensidad",
+                [
+                    "",
+                    "Sin apoyo",
+                    "Baja",
+                    "Media",
+                    "Alta",
+                    "Muy alta"
+                ]
+            )
+
+            duracion = c3.number_input(
+                "Duración (h)",
+                min_value=0.0,
+                step=0.25
+            )
+
+            resultado = st.text_area("Resultado")
+            proxima = st.text_input("Próxima actuación")
+
+            revision = st.selectbox(
+                "¿Revisión PIA?",
+                ["No", "Sí"]
+            )
+
+            observ = st.text_area("Observaciones")
+
+            submitted = st.form_submit_button(
+                "Guardar intervención",
+                type="primary"
+            )
+
+            if submitted:
+                try:
+                    supabase.table("intervenciones").insert({
+                        "persona_id": persona_id_intervencion,
+                        "pia_id": pia_id_intervencion,
+                        "objetivo_id": objetivo_id_intervencion,
+                        "fecha": fecha.isoformat(),
+                        "profesional": profesional,
+                        "area": area,
+                        "intervencion_realizada": actuacion,
+                        "tipo_apoyo": tipo,
+                        "intensidad": intensidad,
+                        "duracion_horas": duracion,
+                        "resultado": resultado,
+                        "proxima_actuacion": proxima,
+                        "revision_pia": revision == "Sí",
+                        "observaciones": observ
+                    }).execute()
+
+                    st.success(
+                        "Intervención guardada correctamente en Supabase."
+                    )
+
+                except Exception as e:
+                    st.error(
+                        f"No se pudo guardar la intervención: {e}"
+                    )
+
+        st.subheader("Histórico")
+
+        try:
+            respuesta_historico = (
+                supabase.table("intervenciones")
+                .select("*")
+                .order("fecha", desc=True)
+                .execute()
+            )
+
+            historico = pd.DataFrame(
+                respuesta_historico.data or []
+            )
+
+            if historico.empty:
+                st.info("Todavía no hay registros.")
+            else:
+                st.dataframe(
+                    historico,
+                    use_container_width=True,
+                    hide_index=True
+                )
+
+        except Exception as e:
+            st.error(
+                f"No se pudo cargar el histórico: {e}"
+            )
 elif section == "Incidencias":
     st.subheader("Registrar incidencia")
     people = active_people()
