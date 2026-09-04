@@ -283,16 +283,53 @@ elif section == "PIA inicial":
             value=pia_existente.get("codigo_participante", "") if pia_existente else ""
         )
 
-        fecha_nacimiento = st.date_input(
-            "Fecha de nacimiento",
-            min_value=date(1950, 1, 1),
-            max_value=date.today(),
-            value=(
-                pd.to_datetime(pia_existente.get("fecha_nacimiento")).date()
-                if pia_existente and pia_existente.get("fecha_nacimiento")
-                else None
-            )
+        fecha_guardada = (
+            pd.to_datetime(pia_existente.get("fecha_nacimiento")).date()
+            if pia_existente and pia_existente.get("fecha_nacimiento")
+            else None
         )
+
+        anio_actual = date.today().year
+        anios_nacimiento = [""] + list(range(anio_actual, 1949, -1))
+        meses_nacimiento = [""] + list(range(1, 13))
+        dias_nacimiento = [""] + list(range(1, 32))
+
+        c1, c2, c3 = st.columns(3)
+
+        with c1:
+            dia_nacimiento = st.selectbox(
+                "Día de nacimiento",
+                dias_nacimiento,
+                index=dias_nacimiento.index(fecha_guardada.day) if fecha_guardada else 0,
+                key="pia_fecha_nac_dia"
+            )
+
+        with c2:
+            mes_nacimiento = st.selectbox(
+                "Mes de nacimiento",
+                meses_nacimiento,
+                index=meses_nacimiento.index(fecha_guardada.month) if fecha_guardada else 0,
+                key="pia_fecha_nac_mes"
+            )
+
+        with c3:
+            anio_nacimiento = st.selectbox(
+                "Año de nacimiento",
+                anios_nacimiento,
+                index=anios_nacimiento.index(fecha_guardada.year) if fecha_guardada else 0,
+                key="pia_fecha_nac_anio"
+            )
+
+        fecha_nacimiento = None
+        if dia_nacimiento and mes_nacimiento and anio_nacimiento:
+            try:
+                fecha_nacimiento = date(
+                    int(anio_nacimiento),
+                    int(mes_nacimiento),
+                    int(dia_nacimiento)
+                )
+            except ValueError:
+                st.error("La fecha de nacimiento seleccionada no es válida.")
 
         municipio = st.text_input(
             "Municipio / entorno habitual",
