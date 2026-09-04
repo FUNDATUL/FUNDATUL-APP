@@ -285,6 +285,7 @@ elif section == "PIA inicial":
 
         fecha_nacimiento = st.date_input(
             "Fecha de nacimiento",
+            max_value=date.today(),
             value=(
                 pd.to_datetime(pia_existente.get("fecha_nacimiento")).date()
                 if pia_existente and pia_existente.get("fecha_nacimiento")
