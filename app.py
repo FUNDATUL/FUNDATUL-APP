@@ -898,33 +898,184 @@ elif section == "Incidencias":
     show_table(load_table("Incidencias"), "incs")
 
 elif section == "Objetivos PIA":
-    st.subheader("Añadir / seguir objetivo PIA")
-    people = active_people()
-    with st.form("new_goal", clear_on_submit=True):
-        c1,c2 = st.columns(2)
-        persona = c1.selectbox("Persona", people or ["Persona 1"])
-        area = c2.text_input("Área")
-        objetivo = st.text_area("Objetivo PIA")
-        indicador = st.text_input("Indicador / criterio")
-        inicial = st.text_area("Situación inicial")
-        apoyos = st.text_area("Apoyos previstos")
-        c1,c2,c3 = st.columns(3)
-        intensidad = c1.selectbox("Intensidad", ["", "Sin apoyo", "Baja", "Media", "Alta", "Muy alta"])
-        frecuencia = c2.text_input("Frecuencia")
-        grado = c3.number_input("Grado consecución %", min_value=0, max_value=100, step=5)
-        evolucion = st.text_area("Evolución")
-        dificultades = st.text_area("Dificultades")
-        ajustes = st.text_area("Ajustes / nuevas actuaciones")
-        c1,c2 = st.columns(2)
-        prox = c1.date_input("Próxima revisión", value=date.today())
-        estado = c2.selectbox("Estado", ["Activo", "Alcanzado", "Suspendido", "Reformular"])
-        submitted = st.form_submit_button("Guardar objetivo", type="primary")
-        if submitted:
-            append_record("Objetivos PIA", {"Persona": person_id_for_name(persona), "Área": area, "Objetivo PIA": objetivo, "Indicador / criterio": indicador, "Situación inicial": inicial, "Apoyos previstos": apoyos, "Intensidad": intensidad, "Frecuencia": frecuencia, "Fecha inicio": date.today(), "Fecha seguimiento": date.today(), "Evolución": evolucion, "Grado consecución %": grado, "Dificultades": dificultades, "Ajustes / nuevas actuaciones": ajustes, "Próxima revisión": prox, "Estado": estado})
-            st.success("Objetivo PIA guardado.")
-    st.subheader("Objetivos registrados")
-    show_table(load_table("Objetivos PIA"), "goals")
+    st.subheader("Seguimiento de objetivos PIA")
 
+    respuesta_personas_obj = (
+        supabase.table("personas")
+        .select("*")
+        .order("nombre")
+        .execute()
+    )
+
+    personas_obj = respuesta_personas_obj.data or []
+
+    if not personas_obj:
+        st.warning("No hay personas registradas.")
+    else:
+        nombres_obj = [
+            p["nombre"]
+            for p in personas_obj
+            if p.get("nombre")
+        ]
+
+        persona_obj = st.selectbox(
+            "Persona",
+            nombres_obj,
+            key="seguimiento_obj_persona"
+        )
+
+        persona_obj_data = next(
+            p for p in personas_obj
+            if p.get("nombre") == persona_obj
+        )
+
+        persona_obj_id = persona_obj_data["id"]
+
+        respuesta_pia_obj = (
+            supabase.table("pia_inicial")
+            .select("id")
+            .eq("persona_id", persona_obj_id)
+            .order("id", desc=True)
+            .limit(1)
+            .execute()
+        )
+
+        pia_obj_id = (
+            respuesta_pia_obj.data[0]["id"]
+            if respuesta_pia_obj.data
+            else None
+        )
+
+        if not pia_obj_id:
+            st.info("Esta persona todavía no tiene un PIA inicial registrado.")
+        else:
+            respuesta_objetivos = (
+                supabase.table("objetivos_pia")
+                .select("*")
+                .eq("pia_id", pia_obj_id)
+                .order("numero_objetivo")
+                .execute()
+            )
+
+            objetivos = respuesta_objetivos.data or []
+
+            if not objetivos:
+                st.info("Este PIA todavía no tiene objetivos registrados.")
+            else:
+                etiquetas_obj = []
+
+                mapa_obj = {}
+
+                for obj in objetivos:
+                    numero = obj.get("numero_objetivo")
+                    resultado = obj.get("resultado_esperado") or ""
+
+                    etiqueta = f"Objetivo {numero}"
+
+                    if resultado:
+                        etiqueta += f" · {resultado}"
+
+                    etiquetas_obj.append(etiqueta)
+                    mapa_obj[etiqueta] = obj
+
+                objetivo_sel = st.selectbox(
+                    "Objetivo del PIA",
+                    etiquetas_obj
+                )
+
+                objetivo_data = mapa_obj[objetivo_sel]
+
+                st.text_area(
+                    "Resultado personal esperado",
+                    value=objetivo_data.get("resultado_esperado") or "",
+                    disabled=True
+                )
+
+                st.text_area(
+                    "Punto de partida",
+                    value=objetivo_data.get("punto_partida") or "",
+                    disabled=True
+                )
+
+                st.text_area(
+                    "Indicador / evidencia",
+                    value=objetivo_data.get("indicador_evidencia") or "",
+                    disabled=True
+                )
+
+                c1, c2 = st.columns(2)
+
+                grado_actual = objetivo_data.get("grado_consecucion")
+
+                grado = c1.number_input(
+                    "Grado de consecución %",
+                    min_value=0,
+                    max_value=100,
+                    step=5,
+                    value=int(grado_actual) if grado_actual is not None else 0
+                )
+
+                opciones_estado = [
+                    "Activo",
+                    "Alcanzado",
+                    "Suspendido",
+                    "Reformular"
+                ]
+
+                estado_actual = objetivo_data.get("estado") or "Activo"
+
+                estado = c2.selectbox(
+                    "Estado",
+                    opciones_estado,
+                    index=(
+                        opciones_estado.index(estado_actual)
+                        if estado_actual in opciones_estado
+                        else 0
+                    )
+                )
+
+                observaciones = st.text_area(
+                    "Observaciones de seguimiento",
+                    value=objetivo_data.get("observaciones") or ""
+                )
+
+                if st.button(
+                    "Guardar seguimiento del objetivo",
+                    type="primary"
+                ):
+                    try:
+                        (
+                            supabase.table("objetivos_pia")
+                            .update({
+                                "grado_consecucion": grado,
+                                "estado": estado,
+                                "observaciones": observaciones
+                            })
+                            .eq("id", objetivo_data["id"])
+                            .execute()
+                        )
+
+                        st.success(
+                            "Seguimiento del objetivo guardado correctamente."
+                        )
+
+                    except Exception as e:
+                        st.error(
+                            f"No se pudo guardar el seguimiento: {e}"
+                        )
+
+            st.subheader("Objetivos registrados")
+
+            tabla_objetivos = pd.DataFrame(objetivos)
+
+            if tabla_objetivos.empty:
+                st.info("Todavía no hay objetivos registrados.")
+            else:
+                st.dataframe(
+                    tabla_objetivos,
+                    use_container_width=True,
+                    hide_index=True
+                )
 elif section == "Coordinaciones":
     st.subheader("Registrar coordinación")
     people = active_people()
