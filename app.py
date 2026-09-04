@@ -234,6 +234,7 @@ elif section == "PIA inicial":
             nombres_personas,
             key="pia_persona"
         )
+
         persona_data = (
             supabase.table("personas")
             .select("id")
@@ -241,7 +242,6 @@ elif section == "PIA inicial":
             .limit(1)
             .execute()
         )
-
         persona_id = persona_data.data[0]["id"] if persona_data.data else None
 
         pia_existente = None
@@ -275,89 +275,102 @@ elif section == "PIA inicial":
                     .eq("pia_id", pia_id_existente)
                     .execute()
                 ).data or []
+
         st.markdown("### 0. Control documental e identificación")
+
         codigo = st.text_input(
-    "Código de participante",
-    value=(pia_existente.get("codigo_participante", "") if pia_existente else "")
-)
+            "Código de participante",
+            value=pia_existente.get("codigo_participante", "") if pia_existente else ""
+        )
+
         fecha_nacimiento = st.date_input(
-    "Fecha de nacimiento",
-    value=(
-        pd.to_datetime(pia_existente.get("fecha_nacimiento")).date()
-        if pia_existente and pia_existente.get("fecha_nacimiento")
-        else None
-    )
-)
+            "Fecha de nacimiento",
+            value=(
+                pd.to_datetime(pia_existente.get("fecha_nacimiento")).date()
+                if pia_existente and pia_existente.get("fecha_nacimiento")
+                else None
+            )
+        )
+
         municipio = st.text_input(
-    "Municipio / entorno habitual",
-    value=(pia_existente.get("municipio", "") if pia_existente else "")
-)
+            "Municipio / entorno habitual",
+            value=pia_existente.get("municipio", "") if pia_existente else ""
+        )
 
-profesional = st.text_input(
-    "Profesional referente",
-    value=(pia_existente.get("profesional_referente", "") if pia_existente else "")
-)
+        profesional = st.text_input(
+            "Profesional referente",
+            value=pia_existente.get("profesional_referente", "") if pia_existente else ""
+        )
 
-col1, col2 = st.columns(2)
-    with col1:
+        col1, col2 = st.columns(2)
+
+        with col1:
             periodo_desde = st.date_input(
-    "Periodo del PIA · Desde",
-    value=(
-        pd.to_datetime(pia_existente.get("periodo_desde")).date()
-        if pia_existente and pia_existente.get("periodo_desde")
-        else None
-    )
-)
-    with col2:
+                "Periodo del PIA · Desde",
+                value=(
+                    pd.to_datetime(pia_existente.get("periodo_desde")).date()
+                    if pia_existente and pia_existente.get("periodo_desde")
+                    else None
+                )
+            )
+
+        with col2:
             periodo_hasta = st.date_input(
-    "Periodo del PIA · Hasta",
-    value=(
-        pd.to_datetime(pia_existente.get("periodo_hasta")).date()
-        if pia_existente and pia_existente.get("periodo_hasta")
-        else None
-    )
-)
+                "Periodo del PIA · Hasta",
+                value=(
+                    pd.to_datetime(pia_existente.get("periodo_hasta")).date()
+                    if pia_existente and pia_existente.get("periodo_hasta")
+                    else None
+                )
+            )
 
-opciones_version = ["Inicial", "Revisión intermedia", "Final", "Extraordinaria"]
-version_guardada = pia_existente.get("version", "Inicial") if pia_existente else "Inicial"
+        opciones_version = ["Inicial", "Revisión intermedia", "Final", "Extraordinaria"]
+        version_guardada = pia_existente.get("version", "Inicial") if pia_existente else "Inicial"
 
-version = st.selectbox(
-    "Versión",
-    opciones_version,
-    index=opciones_version.index(version_guardada) if version_guardada in opciones_version else 0
-)
+        version = st.selectbox(
+            "Versión",
+            opciones_version,
+            index=opciones_version.index(version_guardada) if version_guardada in opciones_version else 0
+        )
 
- st.markdown("### 2. Perfil personal, preferencias y voz de la persona")
- situacion_actual = st.text_area(
-    "2.1. Situación actual y contexto de vida",
-    value=pia_existente.get("situacion_actual", "") if pia_existente else ""
-)
- importante_para = st.text_area(
-    "2.2. Lo que es importante PARA la persona",
-    value=pia_existente.get("importante_para", "") if pia_existente else ""
-)
- bienestar_seguridad = st.text_area(
-    "2.3. Lo que es importante POR su bienestar y seguridad",
-    value=pia_existente.get("importante_por", "") if pia_existente else ""
-)
- fortalezas = st.text_area(
-    "2.4. Capacidades, fortalezas, intereses y recursos personales",
-    value=pia_existente.get("capacidades_fortalezas", "") if pia_existente else ""
-)
- comunicacion = st.text_area(
-    "2.5. Comunicación y apoyo a la toma de decisiones",
-    value=pia_existente.get("comunicacion_toma_decisiones", "") if pia_existente else ""
-)
- red_apoyo = st.text_area(
-    "2.6. Red de apoyo y personas significativas",
-    value=pia_existente.get("red_apoyo", "") if pia_existente else ""
-)
- cambios_deseados = st.text_area(
-    "2.7. Cambios que la persona quiere conseguir",
-    value=pia_existente.get("cambios_deseados", "") if pia_existente else ""
-)
+        st.markdown("### 2. Perfil personal, preferencias y voz de la persona")
 
- st.markdown("### 3. Valoración funcional inicial por áreas de vida")
+        situacion_actual = st.text_area(
+            "2.1. Situación actual y contexto de vida",
+            value=pia_existente.get("situacion_actual", "") if pia_existente else ""
+        )
+
+        importante_para = st.text_area(
+            "2.2. Lo que es importante PARA la persona",
+            value=pia_existente.get("importante_para", "") if pia_existente else ""
+        )
+
+        bienestar_seguridad = st.text_area(
+            "2.3. Lo que es importante POR su bienestar y seguridad",
+            value=pia_existente.get("importante_por", "") if pia_existente else ""
+        )
+
+        fortalezas = st.text_area(
+            "2.4. Capacidades, fortalezas, intereses y recursos personales",
+            value=pia_existente.get("capacidades_fortalezas", "") if pia_existente else ""
+        )
+
+        comunicacion = st.text_area(
+            "2.5. Comunicación y apoyo a la toma de decisiones",
+            value=pia_existente.get("comunicacion_toma_decisiones", "") if pia_existente else ""
+        )
+
+        red_apoyo = st.text_area(
+            "2.6. Red de apoyo y personas significativas",
+            value=pia_existente.get("red_apoyo", "") if pia_existente else ""
+        )
+
+        cambios_deseados = st.text_area(
+            "2.7. Cambios que la persona quiere conseguir",
+            value=pia_existente.get("cambios_deseados", "") if pia_existente else ""
+        )
+
+        st.markdown("### 3. Valoración funcional inicial por áreas de vida")
         st.caption(
             "Escala 0–4: 0 = autónomo/a · 1 = supervisión puntual · "
             "2 = apoyo intermitente · 3 = apoyo frecuente · 4 = apoyo intenso/estable."
@@ -385,50 +398,51 @@ version = st.selectbox(
                 (v for v in valoraciones_existentes if v.get("area") == area),
                 None
             )
+
             st.markdown(f"**{area}**")
+
             evidencia = st.text_area(
-    "Situación inicial / evidencia",
-    value=valoracion_existente.get("situacion_inicial_evidencia", "") if valoracion_existente else "",
-    key=f"pia_evidencia_{i}"
-)
+                "Situación inicial / evidencia",
+                value=valoracion_existente.get("situacion_inicial_evidencia", "") if valoracion_existente else "",
+                key=f"pia_evidencia_{i}"
+            )
 
             c1, c2, c3 = st.columns(3)
 
             with c1:
                 nivel_guardado = valoracion_existente.get("nivel_apoyo", 0) if valoracion_existente else 0
-
                 nivel = st.selectbox(
                     "Nivel de apoyo",
-    [0, 1, 2, 3, 4],
-    index=[0, 1, 2, 3, 4].index(nivel_guardado) if nivel_guardado in [0, 1, 2, 3, 4] else 0,
-    key=f"pia_nivel_{i}"
-)
+                    [0, 1, 2, 3, 4],
+                    index=[0, 1, 2, 3, 4].index(nivel_guardado) if nivel_guardado in [0, 1, 2, 3, 4] else 0,
+                    key=f"pia_nivel_{i}"
+                )
 
             with c2:
                 prioridad_guardada = valoracion_existente.get("prioridad", "Alta") if valoracion_existente else "Alta"
-opciones_prioridad = ["Alta", "Media", "Baja"]
-
-prioridad = st.selectbox(
-    "Prioridad",
-    opciones_prioridad,
-    index=opciones_prioridad.index(prioridad_guardada) if prioridad_guardada in opciones_prioridad else 0,
-    key=f"pia_prioridad_{i}"
-)
+                opciones_prioridad = ["Alta", "Media", "Baja"]
+                prioridad = st.selectbox(
+                    "Prioridad",
+                    opciones_prioridad,
+                    index=opciones_prioridad.index(prioridad_guardada) if prioridad_guardada in opciones_prioridad else 0,
+                    key=f"pia_prioridad_{i}"
+                )
 
             with c3:
-    contexto_guardado = []
-    if valoracion_existente and valoracion_existente.get("contexto_principal"):
-        contexto_guardado = [
-            x.strip() for x in valoracion_existente.get("contexto_principal", "").split(",")
-            if x.strip()
-    ]
+                contexto_guardado = []
+                if valoracion_existente and valoracion_existente.get("contexto_principal"):
+                    contexto_guardado = [
+                        x.strip()
+                        for x in valoracion_existente.get("contexto_principal", "").split(",")
+                        if x.strip()
+                    ]
 
-    contexto = st.multiselect(
-        "Contexto principal",
-        ["Hogar", "Comunidad", "Sede", "Online"],
-        default=contexto_guardado,
-        key=f"pia_contexto_{i}"
-    )
+                contexto = st.multiselect(
+                    "Contexto principal",
+                    ["Hogar", "Comunidad", "Sede", "Online"],
+                    default=contexto_guardado,
+                    key=f"pia_contexto_{i}"
+                )
 
             valoracion_funcional.append({
                 "Área": area,
@@ -440,9 +454,8 @@ prioridad = st.selectbox(
 
             st.divider()
 
-        sintesis_prioridades = st.text_area(
-            "Síntesis de prioridades acordadas"
-        )
+        sintesis_prioridades = st.text_area("Síntesis de prioridades acordadas")
+
         st.markdown("### 4. Resultados personales y objetivos priorizados")
         st.caption(
             "Cada objetivo debe indicar qué cambio se espera, "
@@ -452,10 +465,11 @@ prioridad = st.selectbox(
         objetivos_pia_inicial = []
 
         for i in range(1, 7):
-           objetivo_existente = next(
-        (o for o in objetivos_existentes if o.get("numero_objetivo") == i),
-        None
-    )
+            objetivo_existente = next(
+                (o for o in objetivos_existentes if o.get("numero_objetivo") == i),
+                None
+            )
+
             st.markdown(f"**Objetivo {i}**")
 
             resultado = st.text_area(
@@ -490,24 +504,22 @@ prioridad = st.selectbox(
                     pd.to_datetime(objetivo_existente.get("fecha_revision")).date()
                     if objetivo_existente and objetivo_existente.get("fecha_revision")
                     else None
-        )
-
-               fecha_revision = st.date_input(
-                   "Fecha de revisión",
-                   value=fecha_revision_guardada,
-                   key=f"pia_obj_fecha_{i}"
-        )
+                )
+                fecha_revision = st.date_input(
+                    "Fecha de revisión",
+                    value=fecha_revision_guardada,
+                    key=f"pia_obj_fecha_{i}"
+                )
 
             with c3:
                 prioridad_guardada = objetivo_existente.get("prioridad", "Alta") if objetivo_existente else "Alta"
                 opciones_prioridad_obj = ["Alta", "Media", "Baja"]
-
                 prioridad_obj = st.selectbox(
-                 "Prioridad",
-                 opciones_prioridad_obj,
-                 index=opciones_prioridad_obj.index(prioridad_guardada) if prioridad_guardada in opciones_prioridad_obj else 0,
-                 key=f"pia_obj_prioridad_{i}"
-)
+                    "Prioridad",
+                    opciones_prioridad_obj,
+                    index=opciones_prioridad_obj.index(prioridad_guardada) if prioridad_guardada in opciones_prioridad_obj else 0,
+                    key=f"pia_obj_prioridad_{i}"
+                )
 
             objetivos_pia_inicial.append({
                 "Objetivo": i,
@@ -522,7 +534,7 @@ prioridad = st.selectbox(
             st.divider()
 
         objetivo_general = st.text_area(
-            "Objetivo general del periodo"
+            "Objetivo general del periodo",
             value=pia_existente.get("objetivo_general", "") if pia_existente else ""
         )
 
@@ -560,61 +572,64 @@ prioridad = st.selectbox(
                         "objetivo_general": objetivo_general,
                         "estado": "Activo"
                     }
-                        
 
                     if pia_existente:
-    pia_id = pia_existente["id"]
+                        pia_id = pia_existente["id"]
 
-    supabase.table("pia_inicial") \
-        .update(pia_data) \
-        .eq("id", pia_id) \
-        .execute()
+                        (
+                            supabase.table("pia_inicial")
+                            .update(pia_data)
+                            .eq("id", pia_id)
+                            .execute()
+                        )
 
-    supabase.table("valoracion_funcional") \
-        .delete() \
-        .eq("pia_id", pia_id) \
-        .execute()
+                        (
+                            supabase.table("valoracion_funcional")
+                            .delete()
+                            .eq("pia_id", pia_id)
+                            .execute()
+                        )
 
-    supabase.table("objetivos_pia") \
-        .delete() \
-        .eq("pia_id", pia_id) \
-        .execute()
+                        (
+                            supabase.table("objetivos_pia")
+                            .delete()
+                            .eq("pia_id", pia_id)
+                            .execute()
+                        )
+                    else:
+                        pia_respuesta = (
+                            supabase.table("pia_inicial")
+                            .insert(pia_data)
+                            .execute()
+                        )
+                        pia_id = pia_respuesta.data[0]["id"]
 
-else:
-    pia_respuesta = (
-        supabase.table("pia_inicial")
-        .insert(pia_data)
-        .execute()
-    )
+                    for valoracion in valoracion_funcional:
+                        supabase.table("valoracion_funcional").insert({
+                            "pia_id": pia_id,
+                            "persona_id": persona_id,
+                            "area": valoracion["Área"],
+                            "situacion_inicial_evidencia": valoracion["Situación inicial / evidencia"],
+                            "nivel_apoyo": valoracion["Nivel apoyo"],
+                            "prioridad": valoracion["Prioridad"],
+                            "contexto_principal": valoracion["Contexto"]
+                        }).execute()
 
-    pia_id = pia_respuesta.data[0]["id"]
+                    for objetivo in objetivos_pia_inicial:
+                        supabase.table("objetivos_pia").insert({
+                            "pia_id": pia_id,
+                            "persona_id": persona_id,
+                            "numero_objetivo": objetivo["Objetivo"],
+                            "resultado_esperado": objetivo["Resultado personal esperado"],
+                            "punto_partida": objetivo["Punto de partida"],
+                            "indicador_evidencia": objetivo["Indicador / evidencia"],
+                            "meta_criterio": objetivo["Meta / criterio"],
+                            "fecha_revision": objetivo["Fecha revisión"].isoformat() if objetivo["Fecha revisión"] else None,
+                            "prioridad": objetivo["Prioridad"],
+                            "estado": "Activo"
+                        }).execute()
 
-for valoracion in valoracion_funcional:
-    supabase.table("valoracion_funcional").insert({
-        "pia_id": pia_id,
-        "persona_id": persona_id,
-        "area": valoracion["Área"],
-        "situacion_inicial_evidencia": valoracion["Situación inicial / evidencia"],
-        "nivel_apoyo": valoracion["Nivel apoyo"],
-        "prioridad": valoracion["Prioridad"],
-        "contexto_principal": valoracion["Contexto"]
-    }).execute()
-
-for objetivo in objetivos_pia_inicial:
-    supabase.table("objetivos_pia").insert({
-        "pia_id": pia_id,
-        "persona_id": persona_id,
-        "numero_objetivo": objetivo["Objetivo"],
-        "resultado_esperado": objetivo["Resultado personal esperado"],
-        "punto_partida": objetivo["Punto de partida"],
-        "indicador_evidencia": objetivo["Indicador / evidencia"],
-        "meta_criterio": objetivo["Meta / criterio"],
-        "fecha_revision": objetivo["Fecha revisión"].isoformat() if objetivo["Fecha revisión"] else None,
-        "prioridad": objetivo["Prioridad"],
-        "estado": "Activo"
-    }).execute()
-
-    st.success("PIA inicial guardado correctamente en Supabase.")
+                    st.success("PIA inicial guardado correctamente en Supabase.")
 
             except Exception as e:
                 st.error(f"No se pudo guardar el PIA: {e}")
